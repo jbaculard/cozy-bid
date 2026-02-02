@@ -10,6 +10,24 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Initialize database before handling requests
+let dbReady = false;
+db.initDb().then(() => {
+  dbReady = true;
+  console.log('Database initialized');
+}).catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
+});
+
+// Middleware to ensure DB is ready
+app.use((req, res, next) => {
+  if (!dbReady && req.path.startsWith('/api/')) {
+    return res.status(503).json({ error: 'Database initializing, please retry' });
+  }
+  next();
+});
+
 // Rate limiting for commit/reveal endpoints
 const commitRevealLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
