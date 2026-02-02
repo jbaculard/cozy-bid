@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cozy Bid - Your Turn</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="brand">
+    <div class="brand-icon">&#127968;</div>
+    <div>
+      <h1 id="auctionTitle">Loading...</h1>
+      <p class="brand-tagline">You are <span class="seat-badge" id="seatLabel">...</span></p>
+    </div>
+  </div>
+
+  <p class="desc" id="auctionDesc"></p>
+
+  <div id="statusBox" class="status waiting">Loading...</div>
+
+  <!-- Commit Phase -->
+  <div class="card" id="commitCard">
+    <h2>Step 1: Lock in Your Bid</h2>
+    <div class="info">
+      Enter what this item is worth to you and a secret phrase.
+      Your bid stays hidden until both people reveal.
+    </div>
+
+    <label for="bidInput">Your Bid ($)</label>
+    <input type="number" id="bidInput" step="0.01" min="0.01" max="100000" placeholder="0.00" required>
+
+    <label for="secretInput">Secret Phrase</label>
+    <input type="text" id="secretInput" placeholder="Any memorable phrase" required>
+
+    <div id="commitPreview" class="hidden">
+      <label>Your commit hash:</label>
+      <div class="commit-display" id="commitHash"></div>
+    </div>
+
+    <button id="commitBtn" onclick="submitCommit()">Lock In My Bid</button>
+    <button id="resetBtn" class="btn-secondary hidden" onclick="resetCommit()">Reset My Bid</button>
+  </div>
+
+  <!-- Reveal Phase -->
+  <div class="card hidden" id="revealCard">
+    <h2>Step 2: Reveal Your Bid</h2>
+    <div class="info">
+      Both bids are locked! Enter the same bid and secret to reveal yours.
+    </div>
+
+    <label for="revealBidInput">Your Bid ($)</label>
+    <input type="number" id="revealBidInput" step="0.01" min="0.01" max="100000" placeholder="0.00" required>
+
+    <label for="revealSecretInput">Secret Phrase</label>
+    <input type="text" id="revealSecretInput" placeholder="Same phrase as before" required>
+
+    <button id="revealBtn" onclick="submitReveal()">Reveal My Bid</button>
+  </div>
+
+  <!-- Results -->
+  <div class="card hidden" id="resultsCard">
+    <h2>Results Are In!</h2>
+
+    <div class="flex-row">
+      <div class="result-box">
+        <h3>Roommate A</h3>
+        <div class="bid-display" id="bidADisplay">$0</div>
+      </div>
+      <div class="result-box">
+        <h3>Roommate B</h3>
+        <div class="bid-display" id="bidBDisplay">$0</div>
+      </div>
+    </div>
+
+    <div class="winner-box" id="winnerBox">
+      <h2 id="winnerDisplay">-</h2>
+      <p id="paymentInfo"></p>
+    </div>
+
+    <div class="tie-options hidden" id="tieOptions">
+      <h4>It's a Tie!</h4>
+      <p>You both bid the same amount. Here are some options:</p>
+      <ul>
+        <li><strong>Re-bid:</strong> Create a new auction</li>
+        <li><strong>Coin flip:</strong> Flip for it!</li>
+        <li><strong>Talk it out:</strong> Maybe one person wants it more?</li>
+      </ul>
+    </div>
+
+    <h3>Summary</h3>
+    <div class="summary-box" id="summaryText"></div>
+    <button class="btn-small btn-muted" onclick="copySummary()">Copy Summary</button>
+  </div>
+
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const auctionId = pathParts[2];
+    const seatToken = pathParts[3];
+
+    let currentSeat = null;
+    let currentStatus = null;
+
+    async function sha256(message) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function formatBid(bid) {
+      return parseFloat(bid).toFixed(2);
+    }
+
+    async function computeCommit(bid, secret) {
+      const payload = `${formatBid(bid)}|${secret}|${auctionId}|${currentSeat}`;
+      return await sha256(payload);
+    }
+
+    async function updateCommitPreview() {
+      const bid = document.getElementById('bidInput').value;
+      const secret = document.getElementById('secretInput').value;
+
+      if (bid && secret && parseFloat(bid) > 0 && currentSeat) {
+        const hash = await computeCommit(bid, secret);
+        document.getElementById('commitHash').textContent = hash;
+        document.getElementById('commitPreview').classList.remove('hidden');
+      } else {
+        document.getElementById('commitPreview').classList.add('hidden');
+      }
+    }
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch(`/api/auction/${auctionId}/status?seatToken=${encodeURIComponent(seatToken)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          document.getElementById('statusBox').textContent = 'Error: ' + data.error;
+          document.getElementById('statusBox').className = 'status waiting';
+          return;
+        }
+
+        currentStatus = data;
+
+        if (data.mySeat) {
+          currentSeat = data.mySeat;
+          document.getElementById('seatLabel').textContent = 'Roommate ' + currentSeat;
+        }
+
+        document.getElementById('auctionTitle').textContent = data.title || 'Auction';
+        if (data.description) {
+          document.getElementById('auctionDesc').textContent = data.description;
+        }
+
+        updateUI(data);
+      } catch (err) {
+        console.error('Error fetching status:', err);
+      }
+    }
+
+    function updateUI(status) {
+      const statusBox = document.getElementById('statusBox');
+      const commitCard = document.getElementById('commitCard');
+      const revealCard = document.getElementById('revealCard');
+      const resultsCard = document.getElementById('resultsCard');
+      const resetBtn = document.getElementById('resetBtn');
+
+      if (status.phase === 'revealed') {
+        statusBox.textContent = 'All done! Check out the results below.';
+        statusBox.className = 'status revealed';
+        commitCard.classList.add('hidden');
+        revealCard.classList.add('hidden');
+        resultsCard.classList.remove('hidden');
+        fetchResults();
+      } else if (status.phase === 'reveal') {
+        const hasMyReveal = currentSeat === 'A' ? status.hasRevealA : status.hasRevealB;
+        const hasOtherReveal = currentSeat === 'A' ? status.hasRevealB : status.hasRevealA;
+
+        if (hasMyReveal && !hasOtherReveal) {
+          statusBox.textContent = 'Waiting for your roommate to reveal...';
+          statusBox.className = 'status waiting';
+          commitCard.classList.add('hidden');
+          revealCard.classList.add('hidden');
+        } else if (hasMyReveal && hasOtherReveal) {
+          fetchStatus();
+        } else {
+          statusBox.textContent = 'Both bids locked! Time to reveal.';
+          statusBox.className = 'status ready';
+          commitCard.classList.add('hidden');
+          revealCard.classList.remove('hidden');
+        }
+      } else {
+        const hasMyCommit = currentSeat === 'A' ? status.hasCommitA : status.hasCommitB;
+        const hasOtherCommit = currentSeat === 'A' ? status.hasCommitB : status.hasCommitA;
+
+        if (hasMyCommit) {
+          statusBox.textContent = 'Your bid is locked! Waiting for your roommate...';
+          statusBox.className = 'status waiting';
+          commitCard.classList.remove('hidden');
+          document.getElementById('commitBtn').classList.add('hidden');
+          document.getElementById('bidInput').disabled = true;
+          document.getElementById('secretInput').disabled = true;
+
+          if (!hasOtherCommit) {
+            resetBtn.classList.remove('hidden');
+          } else {
+            resetBtn.classList.add('hidden');
+          }
+        } else {
+          if (hasOtherCommit) {
+            statusBox.textContent = 'Your roommate is ready! Enter your bid.';
+          } else {
+            statusBox.textContent = 'Enter your bid below to get started.';
+          }
+          statusBox.className = 'status waiting';
+          commitCard.classList.remove('hidden');
+          document.getElementById('commitBtn').classList.remove('hidden');
+          document.getElementById('bidInput').disabled = false;
+          document.getElementById('secretInput').disabled = false;
+          resetBtn.classList.add('hidden');
+        }
+      }
+    }
+
+    async function submitCommit() {
+      const bid = document.getElementById('bidInput').value;
+      const secret = document.getElementById('secretInput').value;
+
+      if (!bid || parseFloat(bid) <= 0 || parseFloat(bid) > 100000) {
+        alert('Please enter a valid bid (between $0.01 and $100,000)');
+        return;
+      }
+      if (!secret) {
+        alert('Please enter a secret phrase');
+        return;
+      }
+
+      const parts = bid.split('.');
+      if (parts.length > 1 && parts[1].length > 2) {
+        alert('Bid can have at most 2 decimal places');
+        return;
+      }
+
+      if (!currentSeat) {
+        alert('Still loading... please wait a moment and try again.');
+        return;
+      }
+
+      const btn = document.getElementById('commitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Locking in...';
+
+      try {
+        const commit = await computeCommit(bid, secret);
+
+        const res = await fetch(`/api/auction/${auctionId}/commit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seatToken, commit })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error);
+        }
+
+        localStorage.setItem(`auction_${seatToken}_bid`, bid);
+        localStorage.setItem(`auction_${seatToken}_secret`, secret);
+
+        alert('Bid locked! Remember your bid ($' + formatBid(bid) + ') and secret phrase for the reveal step.');
+        fetchStatus();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Lock In My Bid';
+      }
+    }
+
+    async function resetCommit() {
+      if (!confirm('Reset your bid? You can only do this before your roommate locks theirs in.')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/auction/${auctionId}/reset-commit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seatToken })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error);
+        }
+
+        localStorage.removeItem(`auction_${seatToken}_bid`);
+        localStorage.removeItem(`auction_${seatToken}_secret`);
+
+        alert('Bid reset! You can enter a new one.');
+        fetchStatus();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function submitReveal() {
+      const bid = document.getElementById('revealBidInput').value;
+      const secret = document.getElementById('revealSecretInput').value;
+
+      if (!bid || parseFloat(bid) <= 0) {
+        alert('Please enter your bid');
+        return;
+      }
+      if (!secret) {
+        alert('Please enter your secret phrase');
+        return;
+      }
+
+      const btn = document.getElementById('revealBtn');
+      btn.disabled = true;
+      btn.textContent = 'Revealing...';
+
+      try {
+        const res = await fetch(`/api/auction/${auctionId}/reveal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            seatToken,
+            bid: formatBid(bid),
+            secret
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error);
+        }
+
+        alert('Revealed!');
+        fetchStatus();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Reveal My Bid';
+      }
+    }
+
+    async function fetchResults() {
+      try {
+        const res = await fetch(`/api/auction/${auctionId}/result`);
+        const data = await res.json();
+
+        if (!res.ok || !data.revealed) {
+          return;
+        }
+
+        document.getElementById('bidADisplay').textContent = '$' + data.bidA;
+        document.getElementById('bidBDisplay').textContent = '$' + data.bidB;
+
+        const winnerBox = document.getElementById('winnerBox');
+        const winnerDisplay = document.getElementById('winnerDisplay');
+        const paymentInfo = document.getElementById('paymentInfo');
+        const tieOptions = document.getElementById('tieOptions');
+
+        if (data.winner === 'TIE') {
+          winnerBox.classList.add('tie-box');
+          winnerDisplay.textContent = "It's a Tie!";
+          paymentInfo.textContent = '';
+          tieOptions.classList.remove('hidden');
+        } else {
+          winnerBox.classList.remove('tie-box');
+          const isMe = data.winner === currentSeat;
+          winnerDisplay.textContent = isMe ? 'You Win!' : 'Your Roommate Wins!';
+          if (isMe) {
+            paymentInfo.textContent = `You keep the item and pay your roommate $${data.paymentAmount}.`;
+          } else {
+            paymentInfo.textContent = `They keep the item and pay you $${data.paymentAmount}.`;
+          }
+          tieOptions.classList.add('hidden');
+        }
+
+        // Highlight bids
+        if (data.winner === 'A') {
+          document.getElementById('bidADisplay').classList.add('winner');
+          document.getElementById('bidBDisplay').classList.add('loser');
+        } else if (data.winner === 'B') {
+          document.getElementById('bidBDisplay').classList.add('winner');
+          document.getElementById('bidADisplay').classList.add('loser');
+        } else {
+          document.getElementById('bidADisplay').classList.add('tie');
+          document.getElementById('bidBDisplay').classList.add('tie');
+        }
+
+        const summary = `COZY BID RESULTS
+================
+${data.title}
+${data.description ? data.description + '\n' : ''}
+Roommate A bid: $${data.bidA}
+Roommate B bid: $${data.bidB}
+
+Winner: ${data.winner === 'TIE' ? 'Tie!' : 'Roommate ' + data.winner}
+${data.winner !== 'TIE' ? `Payment: Winner pays $${data.paymentAmount} to loser` : 'Need to decide a tiebreaker!'}`;
+
+        document.getElementById('summaryText').textContent = summary;
+      } catch (err) {
+        console.error('Error fetching results:', err);
+      }
+    }
+
+    function copySummary() {
+      const summary = document.getElementById('summaryText').textContent;
+      navigator.clipboard.writeText(summary).then(() => {
+        const btn = event.target;
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = original, 1500);
+      });
+    }
+
+    // Initialize
+    document.getElementById('bidInput').addEventListener('input', updateCommitPreview);
+    document.getElementById('secretInput').addEventListener('input', updateCommitPreview);
+
+    const savedBid = localStorage.getItem(`auction_${seatToken}_bid`);
+    const savedSecret = localStorage.getItem(`auction_${seatToken}_secret`);
+    if (savedBid) {
+      document.getElementById('bidInput').value = savedBid;
+      document.getElementById('revealBidInput').value = savedBid;
+    }
+    if (savedSecret) {
+      document.getElementById('secretInput').value = savedSecret;
+      document.getElementById('revealSecretInput').value = savedSecret;
+    }
+
+    fetchStatus();
+    setInterval(fetchStatus, 3000);
+  </script>
+</body>
+</html>

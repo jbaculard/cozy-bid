@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cozy Bid - Results</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="brand">
+    <div class="brand-icon">&#127968;</div>
+    <div>
+      <h1 id="auctionTitle">Auction Results</h1>
+      <p class="brand-tagline">Fair and square</p>
+    </div>
+  </div>
+
+  <p class="desc" id="auctionDesc"></p>
+  <p class="item-link hidden" id="itemLink"><a href="#" target="_blank">View Item</a></p>
+
+  <div class="card" id="waitingCard">
+    <div class="status waiting">
+      Results aren't ready yet. Both roommates need to commit and reveal their bids first.
+    </div>
+    <p class="desc text-center">This page will update automatically.</p>
+  </div>
+
+  <div class="card hidden" id="resultsCard">
+    <div class="winner-box" id="winnerBox">
+      <h2 id="winnerText">-</h2>
+      <p id="paymentText"></p>
+    </div>
+
+    <div class="flex-row">
+      <div class="result-box">
+        <h3>Roommate A</h3>
+        <div class="bid-display" id="bidADisplay">-</div>
+      </div>
+      <div class="result-box">
+        <h3>Roommate B</h3>
+        <div class="bid-display" id="bidBDisplay">-</div>
+      </div>
+    </div>
+
+    <div class="tie-options hidden" id="tieOptions">
+      <h4>It's a Tie!</h4>
+      <p>Both roommates bid the same amount. Time to decide!</p>
+      <ul>
+        <li><strong>Re-bid:</strong> Create a new auction</li>
+        <li><strong>Coin flip:</strong> Let chance decide</li>
+        <li><strong>Talk it out:</strong> Maybe someone wants it more?</li>
+      </ul>
+    </div>
+
+    <h3 class="mt-2">Summary</h3>
+    <div class="summary-box" id="summaryText"></div>
+    <button class="btn-small btn-muted" onclick="copySummary()">Copy Summary</button>
+  </div>
+
+  <script>
+    const auctionId = window.location.pathname.split('/')[2];
+
+    async function fetchResults() {
+      try {
+        const statusRes = await fetch(`/api/auction/${auctionId}/status`);
+        const status = await statusRes.json();
+
+        if (statusRes.ok) {
+          document.getElementById('auctionTitle').textContent = status.title || 'Auction Results';
+          if (status.description) {
+            document.getElementById('auctionDesc').textContent = status.description;
+          }
+          if (status.itemUrl) {
+            const itemLink = document.getElementById('itemLink');
+            itemLink.classList.remove('hidden');
+            itemLink.querySelector('a').href = status.itemUrl;
+          }
+        }
+
+        const res = await fetch(`/api/auction/${auctionId}/result`);
+        const data = await res.json();
+
+        if (!res.ok || !data.revealed) {
+          document.getElementById('waitingCard').classList.remove('hidden');
+          document.getElementById('resultsCard').classList.add('hidden');
+          return;
+        }
+
+        document.getElementById('waitingCard').classList.add('hidden');
+        document.getElementById('resultsCard').classList.remove('hidden');
+
+        document.getElementById('bidADisplay').textContent = '$' + data.bidA;
+        document.getElementById('bidBDisplay').textContent = '$' + data.bidB;
+
+        const winnerBox = document.getElementById('winnerBox');
+        const winnerText = document.getElementById('winnerText');
+        const paymentText = document.getElementById('paymentText');
+        const tieOptions = document.getElementById('tieOptions');
+
+        if (data.winner === 'TIE') {
+          winnerBox.classList.add('tie-box');
+          winnerText.textContent = "It's a Tie!";
+          paymentText.textContent = 'Both bid $' + data.bidA;
+          tieOptions.classList.remove('hidden');
+        } else {
+          winnerBox.classList.remove('tie-box');
+          winnerText.textContent = 'Roommate ' + data.winner + ' Wins!';
+          paymentText.textContent = 'Winner pays $' + data.paymentAmount + ' to the other roommate and keeps the item.';
+          tieOptions.classList.add('hidden');
+        }
+
+        if (data.winner === 'A') {
+          document.getElementById('bidADisplay').classList.add('winner');
+          document.getElementById('bidBDisplay').classList.add('loser');
+        } else if (data.winner === 'B') {
+          document.getElementById('bidBDisplay').classList.add('winner');
+          document.getElementById('bidADisplay').classList.add('loser');
+        } else {
+          document.getElementById('bidADisplay').classList.add('tie');
+          document.getElementById('bidBDisplay').classList.add('tie');
+        }
+
+        const summary = `COZY BID RESULTS
+================
+${data.title}
+${data.description ? data.description + '\n' : ''}
+Roommate A bid: $${data.bidA}
+Roommate B bid: $${data.bidB}
+
+Winner: ${data.winner === 'TIE' ? 'Tie!' : 'Roommate ' + data.winner}
+${data.winner !== 'TIE' ? `Payment: Winner pays $${data.paymentAmount} to loser` : 'Need a tiebreaker!'}
+
+Results: ${window.location.href}`;
+
+        document.getElementById('summaryText').textContent = summary;
+      } catch (err) {
+        console.error('Error fetching results:', err);
+      }
+    }
+
+    function copySummary() {
+      const summary = document.getElementById('summaryText').textContent;
+      navigator.clipboard.writeText(summary).then(() => {
+        const btn = event.target;
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = original, 1500);
+      });
+    }
+
+    fetchResults();
+    setInterval(fetchResults, 5000);
+  </script>
+</body>
+</html>

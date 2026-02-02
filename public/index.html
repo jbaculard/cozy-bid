@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cozy Bid - Fair Roommate Auctions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="brand">
+    <div class="brand-icon">&#127968;</div>
+    <div>
+      <h1>Cozy Bid</h1>
+      <p class="brand-tagline">Fair auctions for roommates</p>
+    </div>
+  </div>
+
+  <div class="info">
+    Split furniture fairly! Each person secretly bids what the item is worth to them.
+    Highest bidder keeps it and pays the other person their bid amount.
+  </div>
+
+  <div class="card">
+    <h2>Start an Auction</h2>
+    <form id="createForm">
+      <label for="title">What are you splitting?</label>
+      <input type="text" id="title" name="title" required placeholder="e.g., The comfy couch" maxlength="200">
+
+      <label for="description">Details (optional)</label>
+      <textarea id="description" name="description" rows="2" placeholder="Any notes about the item..."></textarea>
+
+      <label for="itemUrl">Photo or link (optional)</label>
+      <input type="url" id="itemUrl" name="itemUrl" placeholder="https://...">
+
+      <button type="submit" id="submitBtn">Create Auction</button>
+    </form>
+  </div>
+
+  <div class="card hidden" id="result">
+    <h2>Auction Created!</h2>
+    <p class="desc">Send each link to one roommate. Keep them secret!</p>
+
+    <div class="link-box">
+      <label>Roommate A:</label>
+      <a href="#" id="seatALink" target="_blank"></a>
+      <br>
+      <button class="btn-small btn-muted" onclick="copyLink('seatALink')">Copy Link</button>
+    </div>
+
+    <div class="link-box">
+      <label>Roommate B:</label>
+      <a href="#" id="seatBLink" target="_blank"></a>
+      <br>
+      <button class="btn-small btn-muted" onclick="copyLink('seatBLink')">Copy Link</button>
+    </div>
+
+    <div class="results-link">
+      <label>Results page (visible after both reveal):</label>
+      <a href="#" id="resultsLink" target="_blank"></a>
+      <br>
+      <button class="btn-small btn-muted" onclick="copyLink('resultsLink')">Copy Link</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('createForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      try {
+        const res = await fetch('/api/auction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: document.getElementById('title').value,
+            description: document.getElementById('description').value || undefined,
+            itemUrl: document.getElementById('itemUrl').value || undefined
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        document.getElementById('seatALink').href = data.seatALink;
+        document.getElementById('seatALink').textContent = data.seatALink;
+        document.getElementById('seatBLink').href = data.seatBLink;
+        document.getElementById('seatBLink').textContent = data.seatBLink;
+
+        const resultsUrl = `${location.origin}/r/${data.auctionId}`;
+        document.getElementById('resultsLink').href = resultsUrl;
+        document.getElementById('resultsLink').textContent = resultsUrl;
+
+        document.getElementById('result').classList.remove('hidden');
+        document.getElementById('createForm').reset();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Auction';
+      }
+    });
+
+    function copyLink(id) {
+      const link = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(link).then(() => {
+        const btn = event.target;
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = original, 1500);
+      });
+    }
+  </script>
+</body>
+</html>

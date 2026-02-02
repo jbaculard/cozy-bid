@@ -1,0 +1,4 @@
+node_modules/
+auctions.db
+*.db
+.env

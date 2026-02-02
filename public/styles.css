@@ -1,0 +1,461 @@
+/* Cozy Roommates Auction - Shared Styles */
+:root {
+  --warm-bg: #faf6f1;
+  --card-bg: #ffffff;
+  --primary: #e07a5f;
+  --primary-hover: #c96a52;
+  --secondary: #81b29a;
+  --secondary-hover: #6a9a82;
+  --accent: #f2cc8f;
+  --text-dark: #3d405b;
+  --text-muted: #6b6d7a;
+  --border: #e8e4df;
+  --shadow: rgba(61, 64, 91, 0.08);
+  --success-bg: #e8f5e9;
+  --success-border: #81b29a;
+  --warning-bg: #fff8e7;
+  --warning-border: #f2cc8f;
+  --info-bg: #f0f4f8;
+  --info-border: #b8c5d6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  background: var(--warm-bg);
+  color: var(--text-dark);
+  line-height: 1.6;
+}
+
+h1 {
+  color: var(--text-dark);
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-size: 1.75rem;
+}
+
+h2 {
+  color: var(--text-dark);
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin: 0 0 16px 0;
+}
+
+h3 {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px 0;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  font-size: 1rem;
+}
+
+.desc {
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+/* Cards */
+.card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px var(--shadow);
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+
+/* Forms */
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.95rem;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 1rem;
+  margin-bottom: 16px;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: var(--card-bg);
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.15);
+}
+
+input::placeholder, textarea::placeholder {
+  color: #aaa;
+}
+
+/* Buttons */
+button, .btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 8px;
+  font-family: inherit;
+  transition: background 0.2s, transform 0.1s;
+}
+
+button:hover {
+  background: var(--primary-hover);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: var(--secondary);
+}
+
+.btn-secondary:hover {
+  background: var(--secondary-hover);
+}
+
+.btn-small {
+  display: inline-block;
+  width: auto;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  margin-top: 10px;
+}
+
+.btn-muted {
+  background: #e8e4df;
+  color: var(--text-dark);
+}
+
+.btn-muted:hover {
+  background: #ddd8d2;
+}
+
+/* Status badges */
+.status {
+  padding: 14px 18px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status.waiting {
+  background: var(--warning-bg);
+  color: #8a6d3b;
+  border: 1px solid var(--warning-border);
+}
+
+.status.waiting::before {
+  background: var(--accent);
+}
+
+.status.ready {
+  background: var(--success-bg);
+  color: #3d6b4f;
+  border: 1px solid var(--success-border);
+}
+
+.status.ready::before {
+  background: var(--secondary);
+  animation: pulse 1.5s infinite;
+}
+
+.status.revealed {
+  background: var(--info-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--info-border);
+}
+
+.status.revealed::before {
+  background: #81a4c4;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Info boxes */
+.info {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: var(--text-dark);
+}
+
+.warning {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: #8a6d3b;
+}
+
+/* Link boxes */
+.link-box {
+  background: var(--warm-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.link-box label {
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.link-box a {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.link-box a:hover {
+  text-decoration: underline;
+}
+
+/* Result boxes */
+.result-box {
+  background: var(--warm-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.bid-display {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.bid-display.winner {
+  color: var(--secondary);
+}
+
+.bid-display.loser {
+  color: var(--text-muted);
+}
+
+.bid-display.tie {
+  color: var(--accent);
+}
+
+.winner-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #d4edda 100%);
+  border: 2px solid var(--secondary);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.winner-box h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  color: #3d6b4f;
+}
+
+.winner-box p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.winner-box.tie-box {
+  background: linear-gradient(135deg, #fff8e7 0%, #fff3cd 100%);
+  border-color: var(--accent);
+}
+
+.winner-box.tie-box h2 {
+  color: #8a6d3b;
+}
+
+/* Commit preview */
+.commit-display {
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.75rem;
+  word-break: break-all;
+  background: var(--warm-bg);
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-top: 8px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* Summary box */
+.summary-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-muted);
+}
+
+/* Tie options */
+.tie-options {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--warning-bg);
+  border-radius: 12px;
+  border: 1px solid var(--warning-border);
+}
+
+.tie-options h4 {
+  margin: 0 0 12px 0;
+  color: #8a6d3b;
+}
+
+.tie-options ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #8a6d3b;
+}
+
+.tie-options li {
+  margin-bottom: 6px;
+}
+
+/* Results link section */
+.results-link {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Item link */
+.item-link {
+  margin-top: 12px;
+}
+
+.item-link a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.item-link a:hover {
+  text-decoration: underline;
+}
+
+/* Utilities */
+.hidden {
+  display: none;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mt-2 {
+  margin-top: 16px;
+}
+
+/* Logo/Brand */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.brand-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.brand h1 {
+  margin: 0;
+}
+
+.brand-tagline {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Seat badge */
+.seat-badge {
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Flex layouts */
+.flex-row {
+  display: flex;
+  gap: 16px;
+}
+
+.flex-row > * {
+  flex: 1;
+}
+
+/* Google Font import hint - add to HTML head */
+/* <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet"> */
